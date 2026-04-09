@@ -1,0 +1,65 @@
+{
+  "id": "instantmesh",
+  "name": "InstantMesh",
+  "type": "model",
+  "source": "https://github.com/TencentARC/InstantMesh",
+  "description": "Multi-view 3D mesh generation. Give it one image and it internally generates 6 consistent views to reconstruct a detailed textured mesh.",
+  "version": "1.0.0",
+  "author": "Lightning Pixel",
+  "generator_class": "InstantMeshGenerator",
+  "tags": [
+    "image-to-3d",
+    "multi-view",
+    "textured-mesh"
+  ],
+  "nodes": [
+    {
+      "id": "generate",
+      "name": "Generate Mesh",
+      "input": "image",
+      "output": "mesh",
+      "hf_repo": "TencentARC/InstantMesh",
+      "download_check": "diffusion_pytorch_model.bin",
+      "params_schema": [
+        {
+          "id": "model_variant",
+          "label": "Quality",
+          "type": "select",
+          "default": "instant-mesh-large",
+          "options": [
+            { "value": "instant-mesh-large", "label": "Large (best quality)" },
+            { "value": "instant-mesh-base",  "label": "Base (faster)" }
+          ],
+          "tooltip": "Large gives better geometry detail. Base is faster on low VRAM."
+        },
+        {
+          "id": "diffusion_steps",
+          "label": "Diffusion Steps",
+          "type": "select",
+          "default": 75,
+          "options": [
+            { "value": 30, "label": "Fast (30)" },
+            { "value": 75, "label": "Balanced (75)" }
+          ],
+          "tooltip": "Steps used by the Zero123++ multi-view diffusion stage."
+        },
+        {
+          "id": "export_texmap",
+          "label": "Texture Map",
+          "type": "bool",
+          "default": true,
+          "tooltip": "Export a proper UV texture map. Disable for faster vertex-color only output."
+        },
+        {
+          "id": "seed",
+          "label": "Seed",
+          "type": "int",
+          "default": 42,
+          "min": 0,
+          "max": 4294967295,
+          "tooltip": "Change the seed if the result is unsatisfying."
+        }
+      ]
+    }
+  ]
+}
