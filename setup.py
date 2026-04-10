@@ -93,6 +93,7 @@ def setup(python_exe, ext_dir, gpu_sm):
         "opencv-python-headless",
         "tqdm",
         "safetensors",
+        "nvdiffrast",
     )
 
     # ------------------------------------------------------------------ #
