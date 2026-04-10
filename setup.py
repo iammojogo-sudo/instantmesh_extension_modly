@@ -11,16 +11,60 @@ json_args keys:
     gpu_sm      - GPU compute capability as integer (e.g. 89 for RTX 4050)
 """
 import json
+import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
 
 
-def pip(venv, *args):
+def pip(venv, *args, extra_env=None):
     is_win  = platform.system() == "Windows"
     pip_exe = venv / ("Scripts/pip.exe" if is_win else "bin/pip")
-    subprocess.run([str(pip_exe)] + list(args), check=True)
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    subprocess.run([str(pip_exe)] + list(args), check=True, env=env)
+
+
+def find_cuda_home(venv):
+    """
+    Find CUDA home. Prefer system install, fall back to the CUDA libs
+    bundled inside the PyTorch wheel (which pip installs into the venv).
+    """
+    # 1. Explicit env vars set by user
+    for var in ("CUDA_HOME", "CUDA_PATH"):
+        val = os.environ.get(var)
+        if val and Path(val).exists():
+            return val
+
+    # 2. Default system CUDA install location on Windows
+    cuda_base = Path("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA")
+    if cuda_base.exists():
+        versions = sorted(cuda_base.iterdir(), reverse=True)
+        for v in versions:
+            if (v / "bin" / "nvcc.exe").exists():
+                return str(v)
+
+    # 3. Fall back to PyTorch's bundled CUDA (no system install needed)
+    #    torch ships nvcc inside torch/bin on Windows cu* wheels
+    is_win = platform.system() == "Windows"
+    site_packages = venv / ("Lib/site-packages" if is_win else "lib/python*/site-packages")
+    if is_win:
+        torch_cuda = venv / "Lib" / "site-packages" / "torch"
+    else:
+        import glob
+        matches = glob.glob(str(venv / "lib" / "python*" / "site-packages" / "torch"))
+        torch_cuda = Path(matches[0]) if matches else None
+
+    if torch_cuda and torch_cuda.exists():
+        # torch bundles CUDA runtime under torch/lib and nvcc under torch/bin
+        nvcc = torch_cuda / "bin" / "nvcc.exe" if is_win else torch_cuda / "bin" / "nvcc"
+        if nvcc.exists():
+            print("[setup] Using PyTorch bundled CUDA at: %s" % torch_cuda)
+            return str(torch_cuda)
+
+    return None
 
 
 def setup(python_exe, ext_dir, gpu_sm):
@@ -29,7 +73,6 @@ def setup(python_exe, ext_dir, gpu_sm):
 
     print("[setup] Creating venv at %s ..." % venv)
     subprocess.run([python_exe, "-m", "venv", str(venv)], check=True)
-
 
     # ------------------------------------------------------------------ #
     # PyTorch
@@ -75,13 +118,13 @@ def setup(python_exe, ext_dir, gpu_sm):
             print("[setup] Triton whl install failed - skipping.")
 
     # ------------------------------------------------------------------ #
-    # Pillow first (other packages depend on it)
+    # Pillow first
     # ------------------------------------------------------------------ #
     print("[setup] Installing Pillow...")
     pip(venv, "install", "Pillow>=9.0.0")
 
     # ------------------------------------------------------------------ #
-    # Core dependencies (each separately so one failure doesn't kill all)
+    # Core dependencies
     # ------------------------------------------------------------------ #
     print("[setup] Installing core dependencies...")
     core_pkgs = [
@@ -105,14 +148,25 @@ def setup(python_exe, ext_dir, gpu_sm):
         pip(venv, "install", pkg)
 
     # ------------------------------------------------------------------ #
-    # nvdiffrast - must be built from source with no-build-isolation so it
-    # can see the PyTorch already installed in the venv
+    # nvdiffrast - built from source
     # ------------------------------------------------------------------ #
     print("[setup] Installing nvdiffrast build deps...")
     pip(venv, "install", "setuptools", "wheel", "ninja")
+
+    cuda_home = find_cuda_home(venv)
+    if cuda_home:
+        print("[setup] CUDA_HOME resolved to: %s" % cuda_home)
+    else:
+        print("[setup] WARNING: CUDA_HOME not found. nvdiffrast build may fail.")
+
+    build_env = {}
+    if cuda_home:
+        build_env["CUDA_HOME"] = cuda_home
+        build_env["CUDA_PATH"] = cuda_home
+
     print("[setup] Installing nvdiffrast from GitHub...")
     pip(venv, "install", "git+https://github.com/NVlabs/nvdiffrast.git",
-        "--no-build-isolation")
+        "--no-build-isolation", extra_env=build_env)
 
     # ------------------------------------------------------------------ #
     # rembg
