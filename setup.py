@@ -76,6 +76,9 @@ def setup(python_exe, ext_dir, gpu_sm):
     # ------------------------------------------------------------------ #
     # Core dependencies
     # ------------------------------------------------------------------ #
+    print("[setup] Installing Pillow...")
+    pip(venv, "install", "Pillow>=9.0.0")
+
     print("[setup] Installing core dependencies...")
     pip(venv, "install",
         "diffusers==0.27.2",
@@ -84,7 +87,6 @@ def setup(python_exe, ext_dir, gpu_sm):
         "huggingface_hub==0.23.5",
         "omegaconf",
         "einops",
-        "Pillow",
         "numpy",
         "scipy",
         "trimesh",
