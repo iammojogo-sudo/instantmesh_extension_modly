@@ -30,6 +30,8 @@ def setup(python_exe, ext_dir, gpu_sm):
     print("[setup] Creating venv at %s ..." % venv)
     subprocess.run([python_exe, "-m", "venv", str(venv)], check=True)
 
+    pip(venv, "install", "--upgrade", "pip")
+
     # ------------------------------------------------------------------ #
     # PyTorch
     # ------------------------------------------------------------------ #
@@ -50,7 +52,7 @@ def setup(python_exe, ext_dir, gpu_sm):
     pip(venv, "install", *torch_pkgs, "--index-url", torch_index)
 
     # ------------------------------------------------------------------ #
-    # xformers - prebuilt wheel, no compilation needed
+    # xformers
     # ------------------------------------------------------------------ #
     print("[setup] Installing xformers...")
     if gpu_sm >= 70:
@@ -60,7 +62,7 @@ def setup(python_exe, ext_dir, gpu_sm):
             "https://download.pytorch.org/whl/cu118")
 
     # ------------------------------------------------------------------ #
-    # Windows Triton (xformers dependency, prebuilt .whl - no MSVC needed)
+    # Windows Triton
     # ------------------------------------------------------------------ #
     if is_win:
         print("[setup] Installing Windows prebuilt triton...")
@@ -71,16 +73,19 @@ def setup(python_exe, ext_dir, gpu_sm):
         try:
             pip(venv, "install", triton_whl)
         except subprocess.CalledProcessError:
-            print("[setup] Triton whl install failed - skipping (xformers may still work).")
+            print("[setup] Triton whl install failed - skipping.")
 
     # ------------------------------------------------------------------ #
-    # Core dependencies
+    # Pillow first (other packages depend on it)
     # ------------------------------------------------------------------ #
     print("[setup] Installing Pillow...")
     pip(venv, "install", "Pillow>=9.0.0")
 
+    # ------------------------------------------------------------------ #
+    # Core dependencies (each separately so one failure doesn't kill all)
+    # ------------------------------------------------------------------ #
     print("[setup] Installing core dependencies...")
-    pip(venv, "install",
+    core_pkgs = [
         "diffusers==0.27.2",
         "transformers==4.40.2",
         "accelerate",
@@ -95,20 +100,31 @@ def setup(python_exe, ext_dir, gpu_sm):
         "opencv-python-headless",
         "tqdm",
         "safetensors",
-        "nvdiffrast",
-    )
+    ]
+    for pkg in core_pkgs:
+        print("[setup] Installing %s ..." % pkg)
+        pip(venv, "install", pkg)
+
+    # ------------------------------------------------------------------ #
+    # nvdiffrast - must be installed from GitHub, not PyPI
+    # ------------------------------------------------------------------ #
+    print("[setup] Installing nvdiffrast from GitHub...")
+    pip(venv, "install", "git+https://github.com/NVlabs/nvdiffrast.git")
 
     # ------------------------------------------------------------------ #
     # rembg
     # ------------------------------------------------------------------ #
     print("[setup] Installing rembg...")
     if gpu_sm >= 70:
-        pip(venv, "install", "rembg[gpu]")
+        try:
+            pip(venv, "install", "rembg[gpu]")
+        except subprocess.CalledProcessError:
+            pip(venv, "install", "rembg")
     else:
-        pip(venv, "install", "rembg", "onnxruntime")
+        pip(venv, "install", "rembg")
 
     # ------------------------------------------------------------------ #
-    # onnxruntime (rembg dependency, sometimes missing)
+    # onnxruntime
     # ------------------------------------------------------------------ #
     if gpu_sm >= 70:
         try:
