@@ -1,13 +1,14 @@
+# -*- coding: utf-8 -*-
 """
-InstantMesh — Modly extension setup script.
+InstantMesh - Modly extension setup script.
 
 Called by Modly at install time:
     python setup.py <json_args>
 
 json_args keys:
-    python_exe  — path to Modly's embedded Python
-    ext_dir     — absolute path to this extension directory
-    gpu_sm      — GPU compute capability as integer (e.g. 89 for RTX 4050)
+    python_exe  - path to Modly's embedded Python
+    ext_dir     - absolute path to this extension directory
+    gpu_sm      - GPU compute capability as integer (e.g. 89 for RTX 4050)
 """
 import json
 import platform
@@ -16,17 +17,17 @@ import sys
 from pathlib import Path
 
 
-def pip(venv: Path, *args: str) -> None:
+def pip(venv, *args):
     is_win  = platform.system() == "Windows"
     pip_exe = venv / ("Scripts/pip.exe" if is_win else "bin/pip")
-    subprocess.run([str(pip_exe), *args], check=True)
+    subprocess.run([str(pip_exe)] + list(args), check=True)
 
 
-def setup(python_exe: str, ext_dir: Path, gpu_sm: int) -> None:
+def setup(python_exe, ext_dir, gpu_sm):
     venv   = ext_dir / "venv"
     is_win = platform.system() == "Windows"
 
-    print(f"[setup] Creating venv at {venv} …")
+    print("[setup] Creating venv at %s ..." % venv)
     subprocess.run([python_exe, "-m", "venv", str(venv)], check=True)
 
     # ------------------------------------------------------------------ #
@@ -35,36 +36,34 @@ def setup(python_exe: str, ext_dir: Path, gpu_sm: int) -> None:
     if gpu_sm >= 100:
         torch_index = "https://download.pytorch.org/whl/cu128"
         torch_pkgs  = ["torch>=2.7.0", "torchvision>=0.22.0"]
-        print(f"[setup] SM {gpu_sm} (Blackwell) → PyTorch 2.7 + CUDA 12.8")
+        print("[setup] SM %d (Blackwell) -> PyTorch 2.7 + CUDA 12.8" % gpu_sm)
     elif gpu_sm >= 70:
-        # Ada / Ampere / Turing — RTX 20/30/40 series, includes RTX 4050 (SM 89)
         torch_index = "https://download.pytorch.org/whl/cu124"
         torch_pkgs  = ["torch==2.6.0", "torchvision==0.21.0"]
-        print(f"[setup] SM {gpu_sm} → PyTorch 2.6 + CUDA 12.4")
+        print("[setup] SM %d -> PyTorch 2.6 + CUDA 12.4" % gpu_sm)
     else:
         torch_index = "https://download.pytorch.org/whl/cu118"
         torch_pkgs  = ["torch==2.5.1", "torchvision==0.20.1"]
-        print(f"[setup] SM {gpu_sm} (legacy) → PyTorch 2.5 + CUDA 11.8")
+        print("[setup] SM %d (legacy) -> PyTorch 2.5 + CUDA 11.8" % gpu_sm)
 
-    print("[setup] Installing PyTorch…")
+    print("[setup] Installing PyTorch...")
     pip(venv, "install", *torch_pkgs, "--index-url", torch_index)
 
     # ------------------------------------------------------------------ #
-    # xformers — prebuilt wheel, no compilation needed
+    # xformers - prebuilt wheel, no compilation needed
     # ------------------------------------------------------------------ #
-    print("[setup] Installing xformers…")
+    print("[setup] Installing xformers...")
     if gpu_sm >= 70:
-        # PyTorch 2.6 + CUDA 12.4 prebuilt xformers
         pip(venv, "install", "xformers==0.0.29.post1", "--index-url", torch_index)
     else:
         pip(venv, "install", "xformers==0.0.28.post2", "--index-url",
             "https://download.pytorch.org/whl/cu118")
 
     # ------------------------------------------------------------------ #
-    # Windows Triton (xformers dependency, prebuilt .whl — no MSVC needed)
+    # Windows Triton (xformers dependency, prebuilt .whl - no MSVC needed)
     # ------------------------------------------------------------------ #
     if is_win:
-        print("[setup] Installing Windows prebuilt triton…")
+        print("[setup] Installing Windows prebuilt triton...")
         triton_whl = (
             "https://huggingface.co/r4ziel/xformers_pre_built/resolve/main/"
             "triton-2.0.0-cp310-cp310-win_amd64.whl"
@@ -72,12 +71,12 @@ def setup(python_exe: str, ext_dir: Path, gpu_sm: int) -> None:
         try:
             pip(venv, "install", triton_whl)
         except subprocess.CalledProcessError:
-            print("[setup] Triton whl install failed — skipping (xformers may still work).")
+            print("[setup] Triton whl install failed - skipping (xformers may still work).")
 
     # ------------------------------------------------------------------ #
     # Core dependencies
     # ------------------------------------------------------------------ #
-    print("[setup] Installing core dependencies…")
+    print("[setup] Installing core dependencies...")
     pip(venv, "install",
         "diffusers==0.27.2",
         "transformers>=4.40.0",
@@ -99,7 +98,7 @@ def setup(python_exe: str, ext_dir: Path, gpu_sm: int) -> None:
     # ------------------------------------------------------------------ #
     # rembg
     # ------------------------------------------------------------------ #
-    print("[setup] Installing rembg…")
+    print("[setup] Installing rembg...")
     if gpu_sm >= 70:
         pip(venv, "install", "rembg[gpu]")
     else:
@@ -116,7 +115,7 @@ def setup(python_exe: str, ext_dir: Path, gpu_sm: int) -> None:
     else:
         pip(venv, "install", "onnxruntime")
 
-    print("[setup] Done. Venv ready at:", venv)
+    print("[setup] Done. Venv ready at: %s" % venv)
 
 
 if __name__ == "__main__":
