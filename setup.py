@@ -105,10 +105,14 @@ def setup(python_exe, ext_dir, gpu_sm):
         pip(venv, "install", pkg)
 
     # ------------------------------------------------------------------ #
-    # nvdiffrast - must be installed from GitHub, not PyPI
+    # nvdiffrast - must be built from source with no-build-isolation so it
+    # can see the PyTorch already installed in the venv
     # ------------------------------------------------------------------ #
+    print("[setup] Installing nvdiffrast build deps...")
+    pip(venv, "install", "setuptools", "wheel", "ninja")
     print("[setup] Installing nvdiffrast from GitHub...")
-    pip(venv, "install", "git+https://github.com/NVlabs/nvdiffrast.git")
+    pip(venv, "install", "git+https://github.com/NVlabs/nvdiffrast.git",
+        "--no-build-isolation")
 
     # ------------------------------------------------------------------ #
     # rembg
