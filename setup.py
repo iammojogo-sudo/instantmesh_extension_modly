@@ -81,7 +81,7 @@ def setup(python_exe, ext_dir, gpu_sm):
         "diffusers==0.27.2",
         "transformers>=4.40.0",
         "accelerate",
-        "huggingface_hub",
+        "huggingface_hub==0.23.5",
         "omegaconf",
         "einops",
         "Pillow",
