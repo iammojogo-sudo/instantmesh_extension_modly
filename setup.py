@@ -39,8 +39,8 @@ def setup(python_exe, ext_dir, gpu_sm):
         print("[setup] SM %d (Blackwell) -> PyTorch 2.7 + CUDA 12.8" % gpu_sm)
     elif gpu_sm >= 70:
         torch_index = "https://download.pytorch.org/whl/cu124"
-        torch_pkgs  = ["torch==2.6.0", "torchvision==0.21.0"]
-        print("[setup] SM %d -> PyTorch 2.6 + CUDA 12.4" % gpu_sm)
+        torch_pkgs  = ["torch==2.5.1", "torchvision==0.20.1"]
+        print("[setup] SM %d -> PyTorch 2.5.1 + CUDA 12.4" % gpu_sm)
     else:
         torch_index = "https://download.pytorch.org/whl/cu118"
         torch_pkgs  = ["torch==2.5.1", "torchvision==0.20.1"]
@@ -54,7 +54,7 @@ def setup(python_exe, ext_dir, gpu_sm):
     # ------------------------------------------------------------------ #
     print("[setup] Installing xformers...")
     if gpu_sm >= 70:
-        pip(venv, "install", "xformers==0.0.29.post1", "--index-url", torch_index)
+        pip(venv, "install", "xformers==0.0.28.post3", "--index-url", torch_index)
     else:
         pip(venv, "install", "xformers==0.0.28.post2", "--index-url",
             "https://download.pytorch.org/whl/cu118")
@@ -79,7 +79,7 @@ def setup(python_exe, ext_dir, gpu_sm):
     print("[setup] Installing core dependencies...")
     pip(venv, "install",
         "diffusers==0.27.2",
-        "transformers>=4.40.0",
+        "transformers==4.40.2",
         "accelerate",
         "huggingface_hub==0.23.5",
         "omegaconf",
